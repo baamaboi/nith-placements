@@ -1,6 +1,6 @@
 PYTHON_EXE?=python3
 MANAGE=bin/python manage.py
-ACTIVATE?=. bin/activate;
+ACTIVATE?=. venv/bin/activate;
 GET_SECRET_KEY=`base64 /dev/urandom | head -c50`
 ENV_FILE=.env
 
@@ -11,7 +11,7 @@ virtualenv:
 	@echo "-> Getting Essential Build Files"
 	@sudo apt-get install python3-venv
 	@echo "-> Making Virtual Environment"
-	@${PYTHON_EXE} -m venv .
+	@${PYTHON_EXE} -m venv ./venv
 
 genkey: virtualenv
 	@echo "-> Generating Secret key"
