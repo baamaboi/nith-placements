@@ -60,6 +60,7 @@ dist/
 build/
 .settings
 .DS_Store
+*.ipynb
 
 # Coverage Test Reports
 .coverage
