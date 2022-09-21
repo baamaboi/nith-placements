@@ -1,0 +1,15 @@
+{% extends "core/base.html" %}{% load itemat %} {% block content %} {% for cat, cat_val in formated_keys.items %}
+<div class="m-2 border-solid border-gray-200 border p-2 rounded">
+  <span class="inline-block flex flex-row items-center">
+    <i class="fa-solid fa-user pr-2"></i><span class="text-lg">{{ cat }} &nbsp</span>
+  </span>
+  <div class="flex flex-row flex-wrap">
+    {% for key, value in cat_val.items %}
+    <div class="w-1/2">
+      <span class="text-base font-semibold px-1">{{ key }}:</span>
+      <span class="text-base">{{ data|itemat:value}}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %} {% endblock content %}

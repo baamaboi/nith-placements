@@ -1,0 +1,29 @@
+{% extends "core/base.html" %}
+{% block content %}
+{% for message in messages %}
+<h1>{{ message }}</h1>
+{% endfor %}
+<form method="POST">
+    {% csrf_token %}
+    {% for field in form %}
+    <div class="form-group row">
+        {% if field|input_type == 'TextInput' %}
+            <div for="{{ field.label }}" class="col-sm-2 col-form-label">
+                {{ field.label_tag }}
+            </div>
+            <div class="col-sm-10">
+                {{ field|add_classes:'form-control'}}
+                {% if field.help_text %}
+                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                {% endif %}
+            </div>
+        {% else %}
+            ...
+        {% endif %}
+    </div>
+    {% endfor %}
+    {% comment %} {{ form.username|add_classes:"css_class_1 css_class_2" }} {% endcomment %}
+
+<button type="submit">Submit</button>
+</form>
+{% endblock content %}

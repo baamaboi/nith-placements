@@ -1,0 +1,117 @@
+{% load static %} {% load socialaccount %}
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="title" content="NITH Training and Placements" />
+    <meta
+      name="description"
+      content="A student effort to make the training and placemnet process smoother with help of this web app using Django "
+    />
+    <meta name="keywords" content="TPO, Training, Placement, NITH, NATIONAL INSTITUTE OF TECHHNOLOGY  HAMIRPUR" />
+    <meta name="robots" content="index, nofollow" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="language" content="English" />
+    <meta name="author" content="baamaboi" />
+    <title>NITH Training and Placements</title>
+
+    <link href="{% static 'fontawesomefree/css/fontawesome.css' %}" rel="stylesheet" type="text/css" />
+    <link href="{% static 'fontawesomefree/css/brands.css' %}" rel="stylesheet" type="text/css" />
+    <link href="{% static 'fontawesomefree/css/solid.css' %}" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="{% static 'core/css/main.css' %}" />
+  </head>
+
+  <body>
+    <section class="h-screen">
+      <div class="container px-6 py-12 h-full">
+        <div class="flex justify-center items-center flex-wrap h-full g-6 text-gray-800">
+          <div class="md:w-8/12 lg:w-6/12 mb-12 md:mb-0">
+            <img
+              src="https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-login-form/draw2.svg"
+              class="w-full"
+              alt="Phone image"
+            />
+          </div>
+          <div class="md:w-8/12 lg:w-5/12 lg:ml-20">
+            <form method="POST">
+              {% csrf_token %} {% for element in form %}
+              <div class="mb-6">{{ element }}</div>
+              {% endfor %}
+              <!-- Submit button -->
+              <button
+                type="submit"
+                class="inline-block px-7 py-3 bg-blue-600 text-white font-medium text-sm leading-snug uppercase rounded shadow-md hover:bg-blue-700 hover:shadow-lg focus:bg-blue-700 focus:shadow-lg focus:outline-none focus:ring-0 active:bg-blue-800 active:shadow-lg transition duration-150 ease-in-out w-full"
+                data-mdb-ripple="true"
+                data-mdb-ripple-color="light"
+              >
+                Sign in
+              </button>
+            </form>
+            <div
+              class="flex items-center my-4 before:flex-1 before:border-t before:border-gray-300 before:mt-0.5 after:flex-1 after:border-t after:border-gray-300 after:mt-0.5"
+            >
+              <p class="text-center font-semibold mx-4 mb-0">OR</p>
+            </div>
+            <form action="{% provider_login_url 'google' %}" method="post">
+              {% csrf_token %}
+              <button
+                class="px-7 py-3 text-white font-medium text-sm leading-snug uppercase rounded shadow-md hover:shadow-lg focus:shadow-lg focus:outline-none focus:ring-0 active:shadow-lg transition duration-150 ease-in-out w-full flex justify-center items-center mb-3"
+                style="background-color: #3b5998"
+                href="#!"
+                type="submit"
+                data-mdb-ripple="true"
+                data-mdb-ripple-color="light"
+              >
+                <!-- Google -->
+                <i class="fa fa-google" aria-hidden="true"></i>&nbsp Continue with Google
+              </button>
+            </form>
+            <div id="gSignInWrapper">
+              <span class="label">Sign in with:</span>
+              <div id="customBtn" class="customGPlusSignIn">
+                <span class="icon" styyle="background: url({% static 'assets/btn_google_signin_dark_normal_web@2x.png' %}) transparent 5px 50% no-repeat;"></span>
+                <span class="buttonText">Google</span>
+              </div>
+            </div>
+          
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <footer
+      class="p-4 bg-white shadow md:flex md:items-center md:justify-between md:p-6 dark:bg-gray-800 fixed bottom-0 w-full"
+    >
+      <span class="text-sm text-gray-500 sm:text-center dark:text-gray-400"
+        >© 2022 <a href="https://flowbite.com" class="hover:underline">Flowbite™</a>. All Rights Reserved.
+      </span>
+      <ul class="flex flex-wrap items-center mt-3 text-sm text-gray-500 dark:text-gray-400 sm:mt-0">
+        <li>
+          <a href="#" class="mr-4 hover:underline md:mr-6">About</a>
+        </li>
+        <li>
+          <a href="#" class="mr-4 hover:underline md:mr-6">Privacy Policy</a>
+        </li>
+        <li>
+          <a href="#" class="mr-4 hover:underline md:mr-6">Licensing</a>
+        </li>
+        <li>
+          <a href="#" class="hover:underline">Contact</a>
+        </li>
+      </ul>
+    </footer>
+    <script src="https://use.fontawesome.com/9b14fff477.js"></script>
+    <script
+      src="https://code.jquery.com/jquery-3.6.0.min.js"
+      integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4="
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://code.jquery.com/ui/1.13.1/jquery-ui.min.js"
+      integrity="sha256-eTyxS0rkjpLEo16uXTS0uVCS4815lc40K2iVpWDvdSY="
+      crossorigin="anonymous"
+    ></script>
+    <script src="{% static 'core/js/main.js' %}"></script>
+  </body>
+</html>

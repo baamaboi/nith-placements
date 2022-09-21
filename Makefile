@@ -1,5 +1,5 @@
 PYTHON_EXE?=python3
-MANAGE=bin/python manage.py
+MANAGE=venv/bin/python manage.py
 ACTIVATE?=. venv/bin/activate;
 GET_SECRET_KEY=`base64 /dev/urandom | head -c50`
 ENV_FILE=.env
