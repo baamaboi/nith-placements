@@ -76,8 +76,8 @@ def capitalize_each_word(word: str) -> str:
     if t != "str":
         raise TypeError(f"Expected str got {t}")
     word = word.strip()
-    word = word.split()
     word = word.lower()
+    word = word.split()
     result = ""
     for i in word:
         result += i.capitalize() + " "
