@@ -442,7 +442,7 @@ class Company(models.Model):
     graduating_batch = models.DecimalField(
         null=False, blank=False, max_digits=4, decimal_places=0
     )
-    spoc = models.ManyToManyField(MyUser)
+    spoc = models.ManyToManyField(MyUser, null=True)
     remarks = models.TextField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
@@ -512,6 +512,9 @@ class PlacementsAndInterns(models.Model):
         default=0,
         null=False,
         blank=False,
+    )
+    offer_letter = models.JSONField(
+        verbose_name="Offer Letter Status", null=True, blank=False
     )
 
     class Meta:

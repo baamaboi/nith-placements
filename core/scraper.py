@@ -3,6 +3,13 @@ from collections import Counter
 import numpy as np
 import pandas as pd
 from bs4 import BeautifulSoup
+import logging
+
+logging.basicConfig(
+    level=logging.WARNING,
+    filename="results.log",
+    format="%(asctime)s:%(levelname)s - %(message)s",
+)
 
 
 class result:
@@ -101,7 +108,8 @@ class result:
         base["BRANCH"] = branch[base["BRANCH CODE"]]
         base["CGPI"] = summ["CGPI"][len(summ) - 1]
         for grade in semester["Grade"]:
-            if str(grade) == "F":
+            gr = str(grade)
+            if gr == "F" or gr == "UMC":
                 base["ACTIVE BACKLOGS"] += 1
         return [base, semester, summ]
 
@@ -114,13 +122,14 @@ def batch_result(batch_list, save=False):
             r = result(roll, batch)
             data.append(r.clean_data)
         except Exception as e:
+            logging.error(f"Roll {roll}, Batch {batch}: {e}")
             err.append(f"Roll {roll}, Batch {batch}: {e}")
 
     if data == []:
         err_str = ""
         for i in err:
             err_str += i + "\n"
-        raise Exception(f"Data array was empty\n{err_str}")
+        raise Exception(f"Data array was empty. No results were fetched.\n{err_str}")
     data = np.array(data)
     df_base = pd.DataFrame(list(data[:, 0]))
     df_res = pd.concat(data[:, 1], ignore_index=True)
