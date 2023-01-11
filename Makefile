@@ -22,18 +22,16 @@ genkey: virtualenv
 
 install: genkey
 	@echo "-> Installing Dependencies"
-	@${ACTIVATE} pip install -r etc/base.txt
+	@${ACTIVATE} pip install -r requirements.txt
 
 dev: genkey
 	@echo "-> Installing Dependencies"
-	@${ACTIVATE} pip install -r etc/dev.txt
+	@${ACTIVATE} pip install -r dev.txt
 
 project: dev
 	@echo -n "-> Enter Project Name: ";\
 	read PROJECT; \
-	${ACTIVATE} django-admin startproject --template=./etc/structure $${PROJECT} .
-	@echo "-> Clearing Redundant Files"
-	@rm -r etc/structure
+	${ACTIVATE} django-admin startproject $${PROJECT} .
 
 
 migrate:
