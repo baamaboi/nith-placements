@@ -9,7 +9,7 @@ djangorestframework==3.13.1
 lxml==4.8.0
 tables==3.7.0 
 phonenumbers==8.12.45
-psycopg2==2.9.3 
+psycopg2-binary==2.9.3 
 django-allauth==0.50.0 
 fontawesomefree==6.1.1
 jsonschema==4.5.1
