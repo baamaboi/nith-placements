@@ -1,9 +1,9 @@
 from django import forms
 
+from .models import MyUser, Student
+
 # from django.contrib.auth import password_validation
 # from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
-
-from .models import Student, MyUser
 
 
 # class MyUserForm(forms.ModelForm):

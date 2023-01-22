@@ -1,7 +1,9 @@
-from django.contrib.auth.backends import BaseBackend
-from .models import Student
-from django.contrib.auth.hashers import check_password
 import re
+
+from django.contrib.auth.backends import BaseBackend
+from django.contrib.auth.hashers import check_password
+
+from .models import Student
 
 email_pre = re.compile(
     r'^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$'

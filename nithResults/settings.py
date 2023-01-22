@@ -13,7 +13,7 @@ SECRET_KEY = env("SECRET_KEY")
 # PUBLIC_KEY = env("PUBLIC_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ["*"] if DEBUG else []
 # ALLOWED_HOSTS = ["*"]
@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "allauth.socialaccount.providers.google",
     "fontawesomefree",
     "debug_toolbar",
+    "django_extensions",
 ]
 
 MIDDLEWARE = [

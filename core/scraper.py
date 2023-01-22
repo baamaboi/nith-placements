@@ -1,9 +1,19 @@
-import re, requests
-from collections import Counter
-import numpy as np
-import pandas as pd
-from bs4 import BeautifulSoup
+import asyncio
 import logging
+import re
+from decimal import Decimal
+from typing import NoReturn, Optional, Tuple, Union
+
+import aiohttp
+import environ
+from bs4 import BeautifulSoup
+from django.db.models import QuerySet
+
+from .helpers import MASTER_URL, columns_sem, columns_sum, grade_map, intt
+from .models import Result, ResultSummary, Student
+
+env = environ.Env()
+HOST = env("SCRAPER_HOST")
 
 logging.basicConfig(
     level=logging.WARNING,
@@ -11,133 +21,149 @@ logging.basicConfig(
     format="%(asctime)s:%(levelname)s - %(message)s",
 )
 
-
-class result:
-    def __init__(self, roll, batch):
-        self.roll = roll
-        self.raw_data = self.__get_individual_data(roll, str(batch).strip())
-        self.clean_data = self.__clean_individual_data()
-        self.batch = str(batch).strip()
-
-    @staticmethod
-    def __get_individual_data(roll_number, batch):
-        URL = f"http://14.139.56.19/scheme{batch[-2:]}/studentresult/result.asp"
-        post_data = {"RollNumber": str(roll_number), "B1": "Submit"}
-        response = requests.post(URL, data=post_data, timeout=3)
-        pattern = re.compile("sgpi", re.IGNORECASE)
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.content, "html.parser")
-            soup = str(soup.findAll("table"))
-            if bool(re.search(pattern, soup)):
-                return soup
-            raise Exception("Result not found")
-        raise Exception(f"Response returned with Status Code: {response.status_code}")
-
-    def __clean_individual_data(self):
-        branch = {
-            "EE": "Electrical Engineering",
-            "EC": "Electronics and Communication Engineering",
-            "CE": "Civil Engineering",
-            "MS": "Material Science and Engineering",
-            "CS": "Computer Science and Engineering",
-            "CH": "Chemical Engineering",
-            "ME": "Mechanical Engineering",
-            "AR": "Architecture",
-        }
-        df_list = pd.read_html(self.raw_data)
-        df_list = df_list[1:-1]
-        # Basic Information Extract
-        base = df_list[0]
-        base = [" ".join(base[i][0].split()[2:]) for i in base]
-        fname, mname, lname = "", "", ""
-        name_list = base[1].split()
-        fname = name_list[0].strip()
-        if len(name_list) > 1:
-            lname = name_list[-1].strip()
-            mname = " ".join(name_list[1:-1])
-        base = {
-            "ROLL NUMBER": base[0],
-            "FIRST NAME": fname,
-            "MIDDLE NAME": mname,
-            "LAST NAME": lname,
-            "FATHER NAME": base[2],
-            "BRANCH": "",
-            "ACTIVE BACKLOGS": 0,
-        }
-
-        # Semester Table Extract
-        raw_semester_tables = df_list[1::2]
-        semester = []
-        for df in raw_semester_tables:
-            sem_no = int(df[0][0][-2:])
-            df.drop(0, axis=1, inplace=True)
-            df.drop(0, inplace=True)
-            df.columns = df.iloc[0]
-            df.drop(index=df.index[0], axis=0, inplace=True)
-            df.loc[:, "Sub GP"] = df["Sub GP"].astype(int)
-            df.loc[:, "Sub Point"] = df["Sub Point"].astype(int)
-            df["Semester"] = [sem_no] * len(df)
-            semester.append(df)
-
-        # Semester Summary Extract
-        summ = []
-        raw_semester_summary = df_list[2::2]
-        for df in raw_semester_summary:
-            df.columns = [
-                "Semester",
-                "SGPI",
-                "Semester Credits",
-                "CGPI",
-                "Total Credits",
-            ]
-            df.loc[:, "SGPI"] = df["SGPI"].apply(lambda x: x[x.index("=") + 1 :])
-            df.loc[:, "CGPI"] = df["CGPI"].apply(lambda x: x[x.index("=") + 1 :])
-            for key in ["Semester", "Semester Credits", "Total Credits"]:
-                df[key] = df[key].apply(lambda x: re.sub("\D", "", x))
-            for key, typ in zip(df.columns, [int, float, int, float, int]):
-                df[key] = df[key].astype(typ)
-            summ.append(df)
-
-        semester = pd.concat(semester, ignore_index=True)
-        semester.insert(0, "ROLL NUMBER", [self.roll] * len(semester))
-        summ = pd.concat(summ, ignore_index=True)
-        summ.insert(0, "ROLL NUMBER", [self.roll] * len(summ))
-        base["BRANCH CODE"] = Counter(
-            map(lambda x: x[0:2], list(semester["Subject Code"]))
-        ).most_common(1)[0][0]
-        base["BRANCH"] = branch[base["BRANCH CODE"]]
-        base["CGPI"] = summ["CGPI"][len(summ) - 1]
-        for grade in semester["Grade"]:
-            gr = str(grade)
-            if gr == "F" or gr == "UMC":
-                base["ACTIVE BACKLOGS"] += 1
-        return [base, semester, summ]
+pattern = re.compile("sgpi", re.IGNORECASE)
+num = re.compile(r"\d+")
+deci_re = re.compile(r"=(\d+(\.\d+)?)")
+DUAL_DEGREE = "B. Tech. + M. Tech. (Dual Degree)"
+BTECH = "B. Tech."
 
 
-def batch_result(batch_list, save=False):
-    data = []
-    err = []
-    for roll, batch in batch_list:
+def clean_sem(soup: BeautifulSoup, student: Student) -> Tuple[list, int]:
+    rows = soup.findAll("tr")
+    return_list = []
+    sem_no = num.search(rows[0].text).group(0)
+    backlog_count = 0
+    for row in rows[2:]:
+        res = {}
+        for index, data in enumerate(filter(lambda x: x, row.text.split("\n"))):
+            res[columns_sem[index]] = data.strip()
+        res["semester"] = int(sem_no)
+        res["grade"] = intt(res["grade"])
+        res["credits"] = intt(res["credits"])
+        if grade_map[res["grade_letter"]] != res["grade"] // res["credits"]:
+            res["grade"] = grade_map[res["grade_letter"]] // res["credits"]
+        res.pop("grade_letter")
+        res["roll"] = student
+        return_list.append(res)
+        if res["grade"] > 0 and res["grade"] < 4:
+            backlog_count += 1
+    return return_list, backlog_count
+
+
+def clean_sum(soup: BeautifulSoup, student: Student) -> list:
+    rows = soup.findAll("tr")
+    as_type = [int, Decimal, int, Decimal, int]
+    return_list = []
+    for row in rows:
+        res = {}
+        for index, data in enumerate(filter(lambda x: num.search(x), row.text.split("\n"))):
+            data = data.strip()
+            match = num.search(data).group(0)
+            temp = deci_re.search(data)
+            if temp:
+                match = temp.group(1)
+            res[columns_sum[index]] = as_type[index](match)
+            res["roll"] = student
+        return_list.append(res)
+    return return_list
+
+
+async def fetch_result(
+    student: Student,
+    session: aiohttp.ClientSession,
+    URL: str,
+    update_last: Optional[int] = None,
+) -> Tuple[Student, Tuple[list, list, dict]]:
+    roll_number = getattr(student, "roll", None)
+    post_data = {"RollNumber": str(roll_number), "B1": "Submit"}
+    result_found = True
+    async with session.post(URL, data=post_data) as response:
+        if response.status == 200:
+            soup = BeautifulSoup(await response.read(), "lxml")
+            if not bool(re.search(pattern, soup.text)):
+                result_found = False
+            if result_found:
+                # init
+                sem_result_list = []
+                sem_sum_list = []
+                base = {"active_backlog": getattr(student, "active_backlog", 0)}
+                # making soup tasty
+                soup = soup.findAll("table")[1:-1]
+                soup_sum = soup[2::2]
+                soup_sem = soup[1::2]
+                # to create or to update ?
+                if update_last:
+                    soup_sum = soup[-update_last * 2 + 1 :: 2]
+                    soup_sem = soup[-update_last * 2 : -1 : 2]
+                # main
+                for table in soup_sem:
+                    sem_result, back = clean_sem(table, student)
+                    sem_result_list.extend(sem_result)
+                    base["active_backlog"] += back
+                for table in soup_sum:
+                    sem_sum_list.extend(clean_sum(table, student))
+                return (student, (sem_result_list, sem_sum_list, base))
+            logging.error(f"{roll_number} - Result not found")
+        logging.error(f"{roll_number} - Response returned with Status Code: {response.status}")
+
+
+async def fetch_many(queryset: Union[QuerySet, list[Student]], update_last: Optional[int] = None) -> list:
+    async with aiohttp.ClientSession() as session:
+        collect = []
+        for student in queryset:
+            degree = getattr(student, "degree", BTECH)
+            batch = getattr(student, "roll", "00")[0:2] + "/"
+            URL = HOST + getattr(MASTER_URL, degree, "scheme") + batch + "studentresult/result.asp"
+            collect.append(fetch_result(student, session, URL, update_last=update_last))
+            if degree == DUAL_DEGREE:
+                URL = HOST + getattr(MASTER_URL, BTECH, "scheme") + batch + "studentresult/result.asp"
+                collect.append(fetch_result(student, session, URL, update_last=update_last))
+        res = await asyncio.gather(
+            *collect,
+            return_exceptions=True,
+        )
+    return res
+
+
+def create_result(
+    result: Tuple, student: Student, save: Optional[bool] = False, batch: Optional[bool] = True
+) -> Tuple[Student, list[Result], list[ResultSummary]]:
+    if not batch:
+        res = asyncio.run(fetch_many([getattr(student, "roll", None)]))
+        result = [i[1] for i in res]
+    backs = getattr(student, "active_backlog", 0)
+    for sem, sum, base in result:
+        sem_db_list = [Result(**i) for i in sem]
+        sum_db_list = [ResultSummary(**i) for i in sum]
+        backs += getattr(base, "active_backlog", 0)
+        for key, value in base.items():
+            setattr(student, key, value)
+    setattr(student, "active_backlog", backs)
+    if save:
+        student.save()
+        Result.objects.bulk_create(sem_db_list)
+        ResultSummary.objects.bulk_create(sum_db_list)
+    return student, sem_db_list, sum_db_list
+
+
+def create_batch_result(student_queryset: Union[QuerySet, list[Student]]) -> NoReturn:
+    data = asyncio.run(fetch_many(student_queryset))
+    st_all = []
+    sem_all = []
+    sum_all = []
+    for student, data in data:
         try:
-            r = result(roll, batch)
-            data.append(r.clean_data)
+            student, sem_list, sum_list = create_result(data, student)
         except Exception as e:
-            logging.error(f"Roll {roll}, Batch {batch}: {e}")
-            err.append(f"Roll {roll}, Batch {batch}: {e}")
+            logging.error(f"{student.roll} - {student.name} : {e}")
+        st_all = [*st_all, student]
+        sem_all = [*sem_all, *sem_list]
+        sum_all = [*sum_all, *sum_list]
 
-    if data == []:
-        err_str = ""
-        for i in err:
-            err_str += i + "\n"
-        raise Exception(f"Data array was empty. No results were fetched.\n{err_str}")
-    data = np.array(data)
-    df_base = pd.DataFrame(list(data[:, 0]))
-    df_res = pd.concat(data[:, 1], ignore_index=True)
-    df_summ = pd.concat(data[:, 2], ignore_index=True)
-
-    if save == True:
-        df_base.to_pickle("base.pkl")
-        df_res.to_pickle("result.pkl")
-        df_summ.to_pickle("result_summary.pkl")
-
-    return [[df_base, df_res, df_summ], err]
+    Student.objects.bulk_update(
+        st_all,
+        ["active_backlog", "cgpi_bachelor", "cgpi_master", "father_name"],
+        batch_size=len(st_all),
+    )
+    Result.objects.bulk_create(sem_all)
+    ResultSummary.objects.bulk_create(sum_all)

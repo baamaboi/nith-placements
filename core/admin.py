@@ -1,13 +1,13 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+
 from .models import (
     Company,
+    MyUser,
     PlacementsAndInterns,
     Result,
     ResultSummary,
     Student,
-    Subject,
-    MyUser,
 )
 
 # Register your models here.
@@ -54,7 +54,6 @@ class MyUserAdmin(UserAdmin):
 admin.site.register(MyUser, MyUserAdmin)
 admin.site.register(Result)
 admin.site.register(ResultSummary)
-admin.site.register(Subject)
 admin.site.register(PlacementsAndInterns)
 admin.site.register(Student)
 admin.site.register(Company)

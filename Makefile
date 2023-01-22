@@ -50,7 +50,7 @@ format:
 	@echo "-> Run isort imports ordering validation"
 	@${ACTIVATE} isort --profile black --gitignore .
 	@echo "-> Run black validation"
-	@${ACTIVATE} black .
+	@${ACTIVATE} black --line-length 120 .
 
 test:
 	@${MANAGE} test

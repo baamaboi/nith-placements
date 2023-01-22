@@ -1,19 +1,13 @@
-# from rest_framework.response import Response
-# from django.http import Http404
-from core.serializers import *
-from core.models import Student, Company, ResultSummary
-
-# from rest_framework.views import APIView
-# from rest_framework import mixins
 from rest_framework import generics
 from rest_framework.permissions import (
-    DjangoModelPermissions,
-    IsAdminUser,
-    BasePermission,
     SAFE_METHODS,
     AllowAny,
+    BasePermission,
+    IsAdminUser,
 )
 
+from core.models import Company, ResultSummary, Student
+from core.serializers import *
 
 # Permissions
 
